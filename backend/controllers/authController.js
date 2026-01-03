@@ -3,109 +3,158 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 /* ===============================================
-   ✅ REGISTER NEW USER
+   REGISTER USER
 ================================================= */
 exports.register = async (req, res) => {
   try {
     const { fullname, mobile, email, password, location } = req.body;
 
-    // Validation
     if (!fullname || !mobile || !email || !password || !location) {
-      console.warn("⚠️ Missing registration fields:", req.body);
-      return res.status(400).json({ message: "All fields are required." });
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required.",
+      });
     }
 
-    // Check existing user
-    db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-      if (err) {
-        console.error("❌ DB Error (SELECT):", err.message);
-        return res.status(500).json({ message: "Database error. Please try again later." });
-      }
+    db.query(
+      "SELECT id FROM users WHERE email = ?",
+      [email],
+      async (err, results) => {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: "Database error.",
+          });
+        }
 
-      if (results.length > 0) {
-        console.log(`⚠️ Registration blocked: Email already exists (${email})`);
-        return res.status(400).json({ message: "Email already registered." });
-      }
+        if (results.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Email already registered.",
+          });
+        }
 
-      try {
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Save user in DB
         db.query(
-          "INSERT INTO users (fullname, mobile, email, password, location, isAdmin) VALUES (?, ?, ?, ?, ?, ?)",
+          `
+          INSERT INTO users 
+          (fullname, mobile, email, password, location, isAdmin)
+          VALUES (?, ?, ?, ?, ?, ?)
+          `,
           [fullname, mobile, email, hashedPassword, location, 0],
-          (err) => {
-            if (err) {
-              console.error("❌ DB Error (INSERT):", err.message);
-              return res.status(500).json({ message: "Failed to save user." });
+          (err2) => {
+            if (err2) {
+              return res.status(500).json({
+                success: false,
+                message: "Failed to register user.",
+              });
             }
 
-            console.log(`✅ User Registered: ${fullname} (${email})`);
-            res.status(201).json({ message: "Registration successful!" });
+            return res.status(201).json({
+              success: true,
+              message: "Registration successful!",
+            });
           }
         );
-      } catch (hashErr) {
-        console.error("❌ Password hashing error:", hashErr.message);
-        res.status(500).json({ message: "Server error during password encryption." });
       }
-    });
+    );
   } catch (error) {
-    console.error("🔥 Unexpected Register Error:", error.message);
-    res.status(500).json({ message: "Unexpected server error." });
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected server error.",
+    });
   }
 };
 
 /* ===============================================
-   ✅ LOGIN USER / ADMIN
+   LOGIN USER / ADMIN
 ================================================= */
 exports.login = (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    console.warn("⚠️ Missing login fields:", req.body);
-    return res.status(400).json({ message: "Email and password are required." });
-  }
-
-  db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-    if (err) {
-      console.error("❌ DB Error (SELECT):", err.message);
-      return res.status(500).json({ message: "Database error. Please try again later." });
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
     }
 
-    if (results.length === 0) {
-      console.warn(`⚠️ Login failed: No account found for ${email}`);
-      return res.status(400).json({ message: "Invalid credentials." });
-    }
+    db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email],
+      async (err, results) => {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: "Database error.",
+          });
+        }
 
-    const user = results[0];
-    const isMatch = await bcrypt.compare(password, user.password);
+        if (results.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid credentials.",
+          });
+        }
 
-    if (!isMatch) {
-      console.warn(`⚠️ Login failed: Incorrect password for ${email}`);
-      return res.status(400).json({ message: "Invalid credentials." });
-    }
+        const user = results[0];
 
-    // Generate token
-    const token = jwt.sign(
-      { id: user.id, isAdmin: user.isAdmin },
-      process.env.JWT_SECRET,
-      { expiresIn: "2h" }
+        // 🚫 BLOCK DISABLED USERS (IMPORTANT)
+        if (user.isActive === 0) {
+          return res.status(403).json({
+            success: false,
+            message: "Your account has been disabled. Please contact admin.",
+          });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid credentials.",
+          });
+        }
+
+        // 🔐 JWT PAYLOAD
+        const token = jwt.sign(
+          {
+            id: user.id,
+            isAdmin: user.isAdmin === 1,
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "2h" }
+        );
+
+        // 🍪 Cookie
+        res.cookie("token", token, {
+          httpOnly: true,
+          secure: false, // true in production
+          sameSite: "lax",
+          maxAge: 2 * 60 * 60 * 1000,
+        });
+
+        return res.json({
+          success: true,
+          message: "Login successful!",
+          token,
+          user: {
+            id: user.id,
+            fullname: user.fullname,
+            email: user.email,
+            location: user.location,
+            isAdmin: user.isAdmin === 1,
+            isActive: user.isActive === 1, // ✅ send status
+          },
+        });
+      }
     );
-
-    console.log(`✅ Login Success: ${email} | Role: ${user.isAdmin ? "Admin" : "User"}`);
-
-    res.json({
-      success: true,
-      message: "Login successful!",
-      token,
-      user: {
-        id: user.id,
-        fullname: user.fullname,
-        email: user.email,
-        location: user.location,
-        isAdmin: user.isAdmin,
-      },
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Unexpected server error.",
     });
-  });
+  }
 };
