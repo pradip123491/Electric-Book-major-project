@@ -1,68 +1,67 @@
 import React, { useState } from "react";
 import "../App.css";
 import bg1 from "../img/bg1.jpg";
+import { useTranslation } from "react-i18next";
 
 function ForgotPassword() {
-    const [email, setEmail] = useState("");
-    const [error, setError] = useState("");
+  const { t } = useTranslation();
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (
-            !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)
-        ) {
-            setError("Please enter a valid email address.");
-            return;
-        }
-        alert("Password reset link sent to your email!");
-        setEmail("");
-        setError("");
-    };
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
 
-    return (
-        <div
-            className="contact-page"
-            style={{
-                backgroundImage: `url(${bg1})`,
-                backgroundSize: "cover",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center",
-                backgroundAttachment: "fixed",
-                minHeight: "100vh",
-            }}
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setError(t("fpEmailReq"));
+      return;
+    }
+
+    alert(t("fpSuccess"));
+    setEmail("");
+    setError("");
+  };
+
+  return (
+    <div
+      className="contact-page"
+      style={{
+        backgroundImage: `url(${bg1})`,
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+        minHeight: "100vh",
+      }}
+    >
+      <div className="container text-center animate-fade-in">
+        <h1 className="fw-bold text-uppercase mb-2">{t("fpTitle")}</h1>
+        <h3 className="fw-light mb-5">{t("fpSubtitle")}</h3>
+
+        <form
+          onSubmit={handleSubmit}
+          className="d-flex flex-column align-items-center animate-slide-up"
         >
-            <div className="container text-center animate-fade-in">
-                <h1 className="fw-bold text-uppercase mb-2">Forgot Password</h1>
-                <h3 className="fw-light mb-5">
-                    Enter your email to receive a reset link
-                </h3>
+          <input
+            type="email"
+            name="email"
+            placeholder={t("fpEmail")}
+            className="contact-input"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setError("");
+            }}
+          />
+          {error && <p className="text-danger">{error}</p>}
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="d-flex flex-column align-items-center animate-slide-up"
-                >
-                    <input
-                        type="email"
-                        name="email"
-                        placeholder="Your Email"
-                        className="contact-input"
-                        value={email}
-                        onChange={(e) => {
-                            setEmail(e.target.value);
-                            setError("");
-                        }}
-                    />
-                    {error && <p className="text-danger">{error}</p>}
-
-                    <button type="submit" className="submit pink-btn">
-                        Send Reset Link
-                    </button>
-                </form>
-            </div>
-        </div>
-
-
-    );
+          <button type="submit" className="submit pink-btn">
+            {t("fpBtn")}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 export default ForgotPassword;

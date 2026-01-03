@@ -4,11 +4,10 @@ import {
   Routes,
   Route,
   Navigate,
-  useLocation,
 } from "react-router-dom";
 import "./App.css";
 
-// 🏠 Common Components
+// 🌍 Common Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./components/Home";
@@ -23,6 +22,14 @@ import UserNavbar from "./components/Users_componets/UserNavbar";
 import UserDashboard from "./components/Users_componets/UserDashboard";
 import Profile from "./components/Users_componets/Profile";
 import YourBookings from "./components/Users_componets/YourBookings";
+import VerifyStart from "./components/Users_componets/VerifyStart";
+import SelectLanguage from "./components/Users_componets/SelectLanguage";
+import MCQTest from "./components/Users_componets/MCQTest";
+import ShopVerification from "./components/Users_componets/ShopVerification";
+import ChangePassword from "./components/Users_componets/ChangePassword";
+import BookElectrician from "./components/Users_componets/BookElectrician";
+import BookForm from "./components/Users_componets/BookForm";
+import BookingRequests from "./components/Users_componets/BookingRequests";
 
 // 🧑‍💼 Admin Components
 import AdminNavbar from "./components/Admin_componets/AdminNavbar";
@@ -30,75 +37,74 @@ import AdminDashboard from "./components/Admin_componets/AdminDashboard";
 import ManageElectricians from "./components/Admin_componets/ManageElectricians";
 import RegisterData from "./components/Admin_componets/RegisterData";
 import ContactData from "./components/Admin_componets/ContactData";
+import AddMCQ from "./components/Admin_componets/AddMCQ";
+import MCQList from "./components/Admin_componets/MCQList";
+import EditMCQ from "./components/Admin_componets/EditMCQ";
+import BookingManagement from "./components/Admin_componets/BookingManagement";
+
+// 🔐 Admin Route Guard (same level)
+import AdminRoute from "./AdminRoute";
 
 // ⏱️ Session duration (1 hour)
 const TOKEN_EXPIRY_HOURS = 1;
 
 function App() {
-  const [role, setRole] = useState(localStorage.getItem("role") || "guest"); // "guest" | "user" | "admin"
+  const [user, setUser] = useState(null); // null | user object
 
-  // ✅ Re-check session on page load or tab focus
+  /* =====================
+     SESSION CHECK
+  ===================== */
   useEffect(() => {
     const checkSession = () => {
+      const storedUser = localStorage.getItem("user");
       const token = localStorage.getItem("token");
-      const userRole = localStorage.getItem("role");
       const loginTime = localStorage.getItem("loginTime");
 
-      if (token && userRole && loginTime) {
-        const now = new Date().getTime();
-        const elapsed = now - parseInt(loginTime, 10);
+      if (storedUser && token && loginTime) {
+        const now = Date.now();
+        const elapsed = now - Number(loginTime);
 
         if (elapsed < TOKEN_EXPIRY_HOURS * 60 * 60 * 1000) {
-          setRole(userRole);
+          setUser(JSON.parse(storedUser));
         } else {
-          console.log("⏰ Session expired — logging out...");
           handleLogout();
         }
       } else {
-        setRole("guest");
+        setUser(null);
       }
     };
 
     checkSession();
-
-    // Re-check when user switches tab or refocuses the page
     window.addEventListener("focus", checkSession);
 
-    return () => {
-      window.removeEventListener("focus", checkSession);
-    };
+    return () => window.removeEventListener("focus", checkSession);
   }, []);
 
-  // ✅ Handle Login (set user/admin session)
-  const handleLogin = (roleType, token) => {
+  /* =====================
+     LOGIN / LOGOUT
+  ===================== */
+  const handleLogin = (userData, token) => {
     localStorage.setItem("token", token);
-    localStorage.setItem("role", roleType);
-    localStorage.setItem("loginTime", new Date().getTime());
-    setRole(roleType);
+    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("loginTime", Date.now());
+    setUser(userData);
   };
 
-  // ✅ Handle Logout (fixes refresh issue)
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    localStorage.removeItem("user");
     localStorage.removeItem("loginTime");
-    setRole("guest");
+    setUser(null);
   };
 
-  // ✅ Navbar selection (auto-updates after logout/login)
+  /* =====================
+     NAVBAR
+  ===================== */
   const renderNavbar = () => {
-    switch (role) {
-      case "admin":
-        return <AdminNavbar onLogout={handleLogout} />;
-      case "user":
-        return <UserNavbar onLogout={handleLogout} />;
-      default:
-        return <Navbar />;
-    }
+    if (!user) return <Navbar />;
+    if (user.isAdmin) return <AdminNavbar onLogout={handleLogout} />;
+    return <UserNavbar onLogout={handleLogout} />;
   };
-
-  // ✅ Show footer only for guests
-  const renderFooter = () => (role === "guest" ? <Footer /> : null);
 
   return (
     <Router>
@@ -107,52 +113,120 @@ function App() {
 
         <div className="main-content">
           <Routes>
-            {/* 🌍 Public Routes */}
-            {role === "guest" && (
+            {/* 🌍 PUBLIC */}
+            {!user && (
               <>
                 <Route path="/" element={<Home />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
-                <Route path="/login" element={<Login onLogin={handleLogin} />} />
+                <Route
+                  path="/login"
+                  element={<Login onLogin={handleLogin} />}
+                />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-                {/* Redirect protected routes */}
-                <Route path="/user-dashboard" element={<Navigate to="/login" />} />
-                <Route path="/admin-dashboard" element={<Navigate to="/login" />} />
               </>
             )}
 
-            {/* 👨‍🔧 User Routes */}
-            {role === "user" && (
+            {/* 👨‍🔧 USER */}
+            {user && !user.isAdmin && (
               <>
+                <Route path="/book" element={<BookElectrician />} />
+                <Route path="/book/:electricianId" element={<BookForm />} />
+
+                <Route
+                  path="/electrician/booking-requests"
+                  element={<BookingRequests />}
+                />
                 <Route path="/user-dashboard" element={<UserDashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/your-bookings" element={<YourBookings />} />
-                {/* Redirect */}
+                <Route path="/verify" element={<VerifyStart />} />
+                <Route path="/verify/language" element={<SelectLanguage />} />
+                <Route path="/verify/test" element={<MCQTest />} />
+                <Route path="/shop-verification" element={<ShopVerification />} />
+                <Route path="/changepassword" element={< ChangePassword />} />
+
                 <Route path="/" element={<Navigate to="/user-dashboard" />} />
                 <Route path="/admin-dashboard" element={<Navigate to="/user-dashboard" />} />
               </>
             )}
 
-            {/* 🧑‍💼 Admin Routes */}
-            {role === "admin" && (
+            {/* 🧑‍💼 ADMIN (PROTECTED) */}
+            {user && user.isAdmin && (
               <>
-                <Route path="/admin-dashboard" element={<AdminDashboard />} />
-                <Route path="/manage-electricians" element={<ManageElectricians />} />
-                <Route path="/register-data" element={<RegisterData />} />
-                <Route path="/contact-data" element={<ContactData />} />
-                {/* Redirect */}
+                <Route
+                  path="/admin-dashboard"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/manage-electricians"
+                  element={
+                    <AdminRoute>
+                      <ManageElectricians />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/register-data"
+                  element={
+                    <AdminRoute>
+                      <RegisterData />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/contact-data"
+                  element={
+                    <AdminRoute>
+                      <ContactData />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/add-mcq"
+                  element={
+                    <AdminRoute>
+                      <AddMCQ />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/mcq-list"
+                  element={
+                    <AdminRoute>
+                      <MCQList />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/edit-mcq/:id"
+                  element={
+                    <AdminRoute>
+                      <EditMCQ />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/bookings"
+                  element={<BookingManagement />}
+                />
+
                 <Route path="/" element={<Navigate to="/admin-dashboard" />} />
                 <Route path="/user-dashboard" element={<Navigate to="/admin-dashboard" />} />
               </>
             )}
 
-            {/* 🚧 Fallback */}
+            {/* 🚫 FALLBACK */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
 
-        {renderFooter()}
+        <Footer />
       </div>
     </Router>
   );

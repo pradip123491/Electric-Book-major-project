@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import "../App.css";
 import bg1 from "../img/bg1.jpg";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 function Register() {
+  const { t } = useTranslation();
+
   const [formData, setFormData] = useState({
     fullname: "",
     mobile: "",
@@ -20,19 +23,18 @@ function Register() {
   const validate = () => {
     const newErrors = {};
     if (!formData.fullname.trim())
-      newErrors.fullname = "Full Name is required.";
+      newErrors.fullname = t("regFullNameReq");
     if (!/^\d{10}$/.test(formData.mobile))
-      newErrors.mobile = "Enter a valid 10-digit mobile number.";
-    if (
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)
-    )
-      newErrors.email = "Enter a valid email address.";
+      newErrors.mobile = t("regMobileReq");
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email))
+      newErrors.email = t("regEmailReq");
     if (!formData.location.trim())
-      newErrors.location = "Please enter your location (city/area).";
+      newErrors.location = t("regLocationReq");
     if (formData.password.trim().length < 8)
-      newErrors.password = "Password must be at least 8 characters.";
+      newErrors.password = t("regPasswordReq");
     if (formData.password !== formData.confirmPassword)
-      newErrors.confirmPassword = "Passwords do not match.";
+      newErrors.confirmPassword = t("regConfirmPasswordReq");
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -64,7 +66,7 @@ function Register() {
 
       if (response.ok) {
         setSuccessMessage(
-          `✅ Welcome ${formData.fullname} from ${formData.location}! Registration successful.`
+          `${t("regSuccess")} ${formData.fullname} (${formData.location})`
         );
         setFormData({
           fullname: "",
@@ -75,23 +77,22 @@ function Register() {
           location: "",
         });
       } else {
-        setSuccessMessage(`❌ ${data.message || "Registration failed."}`);
+        setSuccessMessage(`${t("regFailed")} ${data.message || ""}`);
       }
     } catch (error) {
       console.error("Error:", error);
-      setSuccessMessage("⚠️ Server error. Please try again later.");
+      setSuccessMessage(t("regServerErr"));
     } finally {
-      setTimeout(() => setLoading(false), 800); // smooth fade-out delay
+      setTimeout(() => setLoading(false), 800);
     }
   };
 
   return (
     <>
-      {/* 🌀 Full-screen loader */}
       {loading && (
         <div className="fullscreen-loader">
           <div className="loader-circle"></div>
-          <p className="loader-text">Creating your account...</p>
+          <p className="loader-text">{t("regLoading")}</p>
         </div>
       )}
 
@@ -119,9 +120,12 @@ function Register() {
             width: "90%",
           }}
         >
-          <h1 className="fw-bold text-uppercase mb-2">Create Account</h1>
+          <h1 className="fw-bold text-uppercase mb-2">
+            {t("regTitle")}
+          </h1>
+
           <h3 className="fw-light mb-5">
-            Join Electrician Book today — it’s fast and easy!
+            {t("regSubtitle")}
           </h3>
 
           <form
@@ -131,19 +135,17 @@ function Register() {
             <input
               type="text"
               name="fullname"
-              placeholder="Your Full Name"
+              placeholder={t("regFullName")}
               className="contact-input"
               value={formData.fullname}
               onChange={handleChange}
             />
-            {errors.fullname && (
-              <p className="text-danger">{errors.fullname}</p>
-            )}
+            {errors.fullname && <p className="text-danger">{errors.fullname}</p>}
 
             <input
               type="text"
               name="mobile"
-              placeholder="Your Mobile Number"
+              placeholder={t("regMobile")}
               className="contact-input"
               value={formData.mobile}
               onChange={handleChange}
@@ -153,7 +155,7 @@ function Register() {
             <input
               type="email"
               name="email"
-              placeholder="Your Email"
+              placeholder={t("regEmail")}
               className="contact-input"
               value={formData.email}
               onChange={handleChange}
@@ -163,31 +165,27 @@ function Register() {
             <input
               type="text"
               name="location"
-              placeholder="Your Location (City / Area)"
+              placeholder={t("regLocation")}
               className="contact-input"
               value={formData.location}
               onChange={handleChange}
             />
-            {errors.location && (
-              <p className="text-danger">{errors.location}</p>
-            )}
+            {errors.location && <p className="text-danger">{errors.location}</p>}
 
             <input
               type="password"
               name="password"
-              placeholder="Your Password"
+              placeholder={t("regPassword")}
               className="contact-input"
               value={formData.password}
               onChange={handleChange}
             />
-            {errors.password && (
-              <p className="text-danger">{errors.password}</p>
-            )}
+            {errors.password && <p className="text-danger">{errors.password}</p>}
 
             <input
               type="password"
               name="confirmPassword"
-              placeholder="Repeat Password"
+              placeholder={t("regConfirmPassword")}
               className="contact-input"
               value={formData.confirmPassword}
               onChange={handleChange}
@@ -197,13 +195,13 @@ function Register() {
             )}
 
             <button type="submit" className="submit pink-btn" disabled={loading}>
-              Register
+              {t("regBtn")}
             </button>
 
             {successMessage && (
               <p
                 className={`mt-3 ${
-                  successMessage.startsWith("✅")
+                  successMessage.includes("success")
                     ? "text-success"
                     : "text-danger"
                 }`}
@@ -224,7 +222,7 @@ function Register() {
                 onMouseEnter={(e) => (e.target.style.color = "#f40351")}
                 onMouseLeave={(e) => (e.target.style.color = "#fff")}
               >
-                Already have an account? <strong>Go to Login</strong>
+                {t("regAlready")}
               </Link>
             </div>
           </form>

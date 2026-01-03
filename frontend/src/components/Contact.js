@@ -1,41 +1,89 @@
 import React, { useState } from "react";
 import "../App.css";
 import bg1 from "../img/bg1.jpg";
+import { useTranslation } from "react-i18next";
 
 function Contact() {
+  const { t } = useTranslation();
+
   const [formData, setFormData] = useState({
     name: "",
     mobile: "",
     email: "",
     message: "",
   });
-  const [errors, setErrors] = useState({});
 
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  /* =====================
+     VALIDATION
+  ===================== */
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required.";
+
+    if (!formData.name.trim())
+      newErrors.name = t("contactNameReq");
+
     if (!/^\d{10}$/.test(formData.mobile))
-      newErrors.mobile = "Enter a valid 10-digit number.";
+      newErrors.mobile = t("contactMobileReq");
+
     if (
       !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)
     )
-      newErrors.email = "Enter a valid email.";
+      newErrors.email = t("contactEmailReq");
+
     if (!formData.message.trim())
-      newErrors.message = "Please enter your message.";
+      newErrors.message = t("contactMsgReq");
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  /* =====================
+     INPUT CHANGE
+  ===================== */
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
-  const handleSubmit = (e) => {
+  /* =====================
+     SUBMIT
+  ===================== */
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
-      alert("Your message has been delivered. Thanks!");
-      setFormData({ name: "", mobile: "", email: "", message: "" });
+    if (!validate()) return;
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(
+        `${process.env.REACT_APP_API_URL}/api/contact`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert(t("contactSuccess"));
+        setFormData({
+          name: "",
+          mobile: "",
+          email: "",
+          message: "",
+        });
+      } else {
+        alert("Failed to submit contact form");
+      }
+    } catch (err) {
+      alert("Server error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,8 +101,12 @@ function Contact() {
       }}
     >
       <div className="container text-center py-5 animate-fade-in">
-        <h1 className="fw-bold text-uppercase mb-2">SAY HELLO</h1>
-        <h3 className="fw-light mb-5">We are always ready to serve you!</h3>
+        <h1 className="fw-bold text-uppercase mb-2">
+          {t("contactTitle")}
+        </h1>
+        <h3 className="fw-light mb-5">
+          {t("contactSubtitle")}
+        </h3>
 
         <form
           onSubmit={handleSubmit}
@@ -63,7 +115,7 @@ function Contact() {
           <input
             type="text"
             name="name"
-            placeholder="Your name"
+            placeholder={t("contactName")}
             className="contact-input"
             value={formData.name}
             onChange={handleChange}
@@ -73,7 +125,7 @@ function Contact() {
           <input
             type="text"
             name="mobile"
-            placeholder="Your mobile number"
+            placeholder={t("contactMobile")}
             className="contact-input"
             value={formData.mobile}
             onChange={handleChange}
@@ -83,7 +135,7 @@ function Contact() {
           <input
             type="email"
             name="email"
-            placeholder="Your Email"
+            placeholder={t("contactEmail")}
             className="contact-input"
             value={formData.email}
             onChange={handleChange}
@@ -92,18 +144,23 @@ function Contact() {
 
           <textarea
             name="message"
-            placeholder="Enter your message"
+            placeholder={t("contactMessage")}
             className="contact-input"
             rows="3"
             value={formData.message}
             onChange={handleChange}
-          ></textarea>
-          {errors.message && <p className="text-danger">{errors.message}</p>}
+          />
+          {errors.message && (
+            <p className="text-danger">{errors.message}</p>
+          )}
 
-          <button type="submit" className="submit pink-btn">
-            SEND MESSAGE
+          <button
+            type="submit"
+            className="submit pink-btn"
+            disabled={loading}
+          >
+            {loading ? "Sending..." : t("contactBtn")}
           </button>
-
         </form>
       </div>
     </div>

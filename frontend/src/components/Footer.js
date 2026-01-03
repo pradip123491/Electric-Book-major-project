@@ -1,21 +1,23 @@
 import React from "react";
 import "../App.css";
+import { useTranslation } from "react-i18next";
 
 function Footer() {
+  const { t } = useTranslation();
+
   return (
     <footer className="footer text-center text-white">
       <div className="container">
         <p className="footer-text">
-          We have a largest community of certified electrical engineers and
-          electricians. With over{" "}
-          <strong>10,000+ verified professionals</strong>, our website is 100%
-          secure, trusted, and focused on connecting customers with reliable
-          experts.
+          {t("footerText")}{" "}
+          <strong>{t("footerProfessionals")}</strong>
+          {t("footerText2")}
         </p>
       </div>
+
       <div className="footer-bottom">
-        © {new Date().getFullYear()} Copyright —{" "}
-        <span className="fw-bold">Electrician Book</span>
+        © {new Date().getFullYear()} {t("copyright")} —{" "}
+        <span className="fw-bold">{t("appName")}</span>
       </div>
     </footer>
   );

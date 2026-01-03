@@ -2,21 +2,38 @@ import React, { useState } from "react";
 import "../App.css";
 import bg1 from "../img/bg1.jpg";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-function Login({ onLogin }) {   // ✅ accept onLogin from props
-  const [formData, setFormData] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+function Login({ onLogin }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  /* =====================
+     VALIDATION
+  ===================== */
   const validate = () => {
     const newErrors = {};
-    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
-      newErrors.email = "Enter a valid email address.";
+
+    if (
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+        formData.email
+      )
+    ) {
+      newErrors.email = t("loginEmailReq");
     }
+
     if (formData.password.trim().length < 8) {
-      newErrors.password = "Password must be at least 8 characters.";
+      newErrors.password = t("loginPasswordReq");
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -26,42 +43,54 @@ function Login({ onLogin }) {   // ✅ accept onLogin from props
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
+  /* =====================
+     SUBMIT
+  ===================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include", // ✅ cookie support
+          body: JSON.stringify(formData),
+        }
+      );
 
       const data = await response.json();
 
-      if (response.ok && data.token) {
-        const roleType = data.user.isAdmin === 1 ? "admin" : "user";
-
-        // ✅ Save session
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("role", roleType);
-        localStorage.setItem("loginTime", new Date().getTime());
-
-        // ✅ Update parent (App.js)
-        if (onLogin) onLogin(roleType, data.token);
-
-        // ✅ Redirect
-        setTimeout(() => {
-          navigate(roleType === "admin" ? "/admin-dashboard" : "/user-dashboard");
-        }, 800);
-      } else {
-        setErrors({ form: data.message || "Invalid credentials. Please try again." });
+      if (!response.ok || !data.success) {
+        setErrors({ form: data.message || t("loginInvalid") });
+        return;
       }
+
+      // ✅ IMPORTANT: PASS FULL USER OBJECT
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("loginTime", Date.now());
+
+      if (onLogin) {
+        onLogin(data.user, data.token);
+      }
+
+      // ✅ Redirect based on isAdmin (BOOLEAN)
+      setTimeout(() => {
+        if (data.user.isAdmin) {
+          navigate("/admin-dashboard");
+        } else {
+          navigate("/user-dashboard");
+        }
+      }, 300);
+
     } catch (error) {
       console.error("⚠️ Login Error:", error);
-      setErrors({ form: "Server error. Please try again later." });
+      setErrors({ form: t("loginServerErr") });
     } finally {
       setLoading(false);
     }
@@ -72,7 +101,7 @@ function Login({ onLogin }) {   // ✅ accept onLogin from props
       {loading && (
         <div className="loading-overlay">
           <div className="loader"></div>
-          <p className="loading-text">Logging you in...</p>
+          <p className="loading-text">{t("loginLoading")}</p>
         </div>
       )}
 
@@ -93,53 +122,73 @@ function Login({ onLogin }) {   // ✅ accept onLogin from props
         <div
           className="container text-center animate-fade-in"
           style={{
-            background: "rgba(0, 0, 0, 0.5)",
+            background: "rgba(0,0,0,0.5)",
             padding: "40px 20px",
             borderRadius: "15px",
             maxWidth: "600px",
             width: "90%",
           }}
         >
-          <h1 className="fw-bold text-uppercase mb-2 text-light">Log In</h1>
-          <h3 className="fw-light mb-5 text-light">Access your account securely</h3>
+          <h1 className="fw-bold text-uppercase mb-2 text-light">
+            {t("loginTitle")}
+          </h1>
+          <h3 className="fw-light mb-5 text-light">
+            {t("loginSubtitle")}
+          </h3>
 
-          {errors.form && <p className="text-danger fw-bold">{errors.form}</p>}
+          {errors.form && (
+            <p className="text-danger fw-bold">{errors.form}</p>
+          )}
 
           <form onSubmit={handleSubmit}>
             <input
               type="email"
               name="email"
-              placeholder="Your Email"
+              placeholder={t("loginEmail")}
               className="contact-input"
               value={formData.email}
               onChange={handleChange}
             />
-            {errors.email && <p className="text-danger">{errors.email}</p>}
+            {errors.email && (
+              <p className="text-danger">{errors.email}</p>
+            )}
 
             <input
               type="password"
               name="password"
-              placeholder="Your Password"
+              placeholder={t("loginPassword")}
               className="contact-input"
               value={formData.password}
               onChange={handleChange}
             />
-            {errors.password && <p className="text-danger">{errors.password}</p>}
+            {errors.password && (
+              <p className="text-danger">{errors.password}</p>
+            )}
 
-            <button type="submit" className="submit pink-btn" disabled={loading}>
-              {loading ? "Please wait..." : "Log In"}
+            <button
+              type="submit"
+              className="submit pink-btn"
+              disabled={loading}
+            >
+              {loading ? t("loginBtnLoading") : t("loginBtn")}
             </button>
           </form>
 
           <div className="mt-3">
-            <Link to="/register" style={{ color: "#fff", textDecoration: "underline" }}>
-              Don’t have an account? <strong>Create Account</strong>
+            <Link
+              to="/register"
+              style={{ color: "#fff", textDecoration: "underline" }}
+            >
+              {t("loginNoAccount")}
             </Link>
           </div>
 
           <div className="mt-3">
-            <Link to="/forgot-password" style={{ color: "#fff", textDecoration: "underline" }}>
-              Forgot Password? <strong>Reset Here</strong>
+            <Link
+              to="/forgot-password"
+              style={{ color: "#fff", textDecoration: "underline" }}
+            >
+              {t("loginForgot")}
             </Link>
           </div>
         </div>

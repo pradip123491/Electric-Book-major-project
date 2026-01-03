@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import "../App.css";
+import "../../App.css";
 
-function Home() {
+function BookElectrician() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -109,4 +109,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default BookElectrician;
